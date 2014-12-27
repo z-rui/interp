@@ -3,6 +3,7 @@ CFLAGS=-Wall -g
 LDFLAGS=-lm
 
 a: scanner.o grammar.o
+	$(CC) -o $@ scanner.o grammar.o
 
 scanner.o: scanner.c scanner.h grammar.h
 grammar.o: grammar.c grammar.h 
@@ -14,6 +15,6 @@ grammar.c grammar.h: grammar.y
 	./lemon grammar.y
 
 clean:
-	rm *.o
+	rm *.o grammar.{c,h,out} scanner.[ch]
 
 .PHONY: clean
