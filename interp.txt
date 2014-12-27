@@ -1,0 +1,97 @@
+语言文档
+========
+
+语法:
+
+prgm         ::= sub-list block
+程序由子过程列表和主过程构成。
+
+sub-list     ::= { sub-dcl }
+子过程列表由若干子过程声明构成。
+
+sub-dcl      ::= "SUB" NUMBER block "ENDSUB"
+子过程声明的格式。NUMBER必须是介于0和MAXVAR(不含)的某个整数。对某个整数声明多个子过程是非法的。
+
+block        ::= { stmt }
+语句块由若干语句构成。子过程的主体和主过程都是一个语句块。
+
+stmt         ::= read-stmt
+               | write-stmt
+               | if-stmt
+               | while-stmt
+               | for-stmt
+               | assign-stmt
+               | call-stmt
+语句分为以下各类：输入语句、输出语句、判断(IF)语句、WHILE循环、FOR循环、赋值语句和调用语句。
+
+read-stmt    ::= "READ" var
+从标准设备获得输入。输入格式为C标准库的 %lg 规范。
+
+write-stmt   ::= "WRITE" write-arg
+从标准设备获得输出。输出格式为C标准库的 %.14lg 规范。输出后会自动换行。
+
+write-arg    ::= LITERAL | expr
+输出的内容可以是字面量（以双引号(")扩起的任何字符系列），也可以是表达式。
+
+if-stmt      ::= "IF" condition "THEN" block [ "ELSE" block ] "ENDIF"
+IF语句当条件为真时，执行THEN部分的语句块，否则执行ELSE部分的语句块（若有）。
+
+while-stmt   ::= "WHILE" condition "DO" block "ENDWHILE"
+WHILE语句当条件为真时，重复地执行循环体语句块。
+
+condition    ::= compare-condition
+               | logical-condition
+条件分为比较条件或逻辑条件。
+
+compare-condition
+             ::= expr compare-op expr
+比较条件由比较运算符(见下)连接的两个表达式构成。
+
+compare-op   ::= "<" | ">" | "="
+
+logical-condition
+             ::= bracket-condition logical-op bracket-condition
+               | "NOT" bracket-condition
+逻辑条件分为两种，1)由二元逻辑运算符（AND或OR）连接的两个用括号括起来的条件；2)由NOT跟着一个用括号括起来的条件。规定“用括号括起来”的目的是避免讨论逻辑运算符的优先级和结合性。AND和OR逻辑运算是短路的。
+
+bracket-condition
+             ::= "(" condition ")"
+
+logical-op   ::= "AND" | "OR"
+
+for-stmt     ::= "FOR" var "=" expr to-word expr [ "STEP" expr ] "DO" block "ENDFOR"
+FOR语句执行时，先给var赋予初始值expr(1)，当var的值小于等于（如果步进值为负数，则为大于等于）终了值expr(2)的时候，执行循环体。循环体执行完毕后，将var的值增加步进值expr(3)，然后重新判断条件并决定是否继续循环或退出循环。
+当expr(3)部分没有提供时，步进值由to-word决定。"TO"将步进值设为1，而"DOWNTO"将步进值设为-1。
+注意：expr(1)、expr(2)、expr(3)在开始循环时就已经被求值，此后这些表达式的值若有改变，对循环次数无影响。
+
+to-word      ::= "TO" | "DOWNTO"
+
+assign-stmt  ::= "LET" var "=" expr
+赋值语句将表达式expr求值后赋予变量var。
+
+call-stmt    ::= "CALL" NUMBER;
+调用语句调用已定义的编号为NUMBER的子过程。调用未定义的过程是非法的。
+注意：如果被调用的子过程在调用语句之后被定义（如相互递归的情况），则认为此调用是合法的。只有调用整个程序中都未定义的子过程才是非法的。
+
+var          ::= ID | "[" expr "]"
+变量有两种形式，标识符（单个大写字母）或者由方括号括起的表达式。
+运行时的变量共有MAXVAR个，编号依次为0-MAXVAR-1。其中，标识符A-Z分别和编号为0-25的变量对应。
+对于第二种形式，expr求值的结果应为一个正整数，且小于MAXVAR。这种形式代表编号为expr的值的变量。例如，表达式[24]表示编号为24的变量，也就是变量Y。
+
+expr         ::= add-expr
+表达式遵循通常的算术表达式习惯。下面的列表以优先级从低到高的顺序列出了所有的表达式。
+
+add-expr     ::= mult-expr { add-op mult-expr }
+
+add-op       ::= "+" | "-"
+
+mult-expr    ::= unary-expr { mult-op unary-expr }
+
+mult-op      ::= "*" | "/" | "%"
+
+unary-expr   ::= unary-op unary-expr | primary-expr
+
+unary-op     ::= "+" | "-"
+
+primary-expr ::= "(" expr ")" | var | NUMBER
+初等表达式可以是括号括起的表达式，也可以是变量或者数字（常数）。
