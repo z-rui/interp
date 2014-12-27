@@ -1,17 +1,12 @@
+%{
+#include "interp.h"
+
+#define PARSE(tok) Parse(yyextra->parser, tok, yytext, yyextra)
+%}
+
 %option noyywrap
 %option reentrant
-%option extra-type="void *"
-
-%{
-#include "grammar.h"
-#ifndef NDEBUG
-extern void ParseTrace(FILE *, char *);
-#endif
-extern void *ParseAlloc(void *(*)(size_t));
-extern void ParseFree(void *, void (*)(void *));
-extern void Parse(void *, int, const char *);
-
-%}
+%option extra-type="struct parse_context *"
 
 LITERAL \"[^"]*\"
 NUMBER [0-9]+(\.[0-9]*)?([eE]+[0-9]+)?
@@ -19,42 +14,42 @@ COMMENT \{[^}]*\}
 
 %%
 
-{NUMBER}	Parse(yyextra, TOK_NUMBER, yytext);
-{LITERAL}	Parse(yyextra, TOK_LITERAL, yytext);
-SUB		Parse(yyextra, TOK_SUB, yytext);
-ENDSUB		Parse(yyextra, TOK_ENDSUB, yytext);
-READ		Parse(yyextra, TOK_READ, yytext);
-WRITE		Parse(yyextra, TOK_WRITE, yytext);
-IF		Parse(yyextra, TOK_IF, yytext);
-THEN		Parse(yyextra, TOK_THEN, yytext);
-ELSE		Parse(yyextra, TOK_ELSE, yytext);
-ENDIF		Parse(yyextra, TOK_ENDIF, yytext);
-WHILE		Parse(yyextra, TOK_WHILE, yytext);
-DO		Parse(yyextra, TOK_DO, yytext);
-ENDWHILE	Parse(yyextra, TOK_ENDWHILE, yytext);
-FOR		Parse(yyextra, TOK_FOR, yytext);
-TO		Parse(yyextra, TOK_TO, yytext);
-DOWNTO		Parse(yyextra, TOK_DOWNTO, yytext);
-STEP		Parse(yyextra, TOK_STEP, yytext);
-ENDFOR		Parse(yyextra, TOK_ENDFOR, yytext);
-LET		Parse(yyextra, TOK_LET, yytext);
-CALL		Parse(yyextra, TOK_CALL, yytext);
-OR		Parse(yyextra, TOK_OR, yytext);
-AND		Parse(yyextra, TOK_AND, yytext);
-NOT		Parse(yyextra, TOK_NOT, yytext);
-"+"		Parse(yyextra, TOK_PLUS, yytext);
-"-"		Parse(yyextra, TOK_MINUS, yytext);
-"*"		Parse(yyextra, TOK_MULT, yytext);
-"/"		Parse(yyextra, TOK_DIV, yytext);
-"%"		Parse(yyextra, TOK_MOD, yytext);
-"<"		Parse(yyextra, TOK_LT, yytext);
-">"		Parse(yyextra, TOK_GT, yytext);
-"("		Parse(yyextra, TOK_LPAR, yytext);
-")"		Parse(yyextra, TOK_RPAR, yytext);
-"["		Parse(yyextra, TOK_LBRAC, yytext);
-"]"		Parse(yyextra, TOK_RBRAC, yytext);
-"="		Parse(yyextra, TOK_EQ, yytext);
-[A-Z]		Parse(yyextra, TOK_ID, yytext);
+{NUMBER}	PARSE(TOK_NUMBER);
+{LITERAL}	PARSE(TOK_LITERAL);
+SUB		PARSE(TOK_SUB);
+ENDSUB		PARSE(TOK_ENDSUB);
+READ		PARSE(TOK_READ);
+WRITE		PARSE(TOK_WRITE);
+IF		PARSE(TOK_IF);
+THEN		PARSE(TOK_THEN);
+ELSE		PARSE(TOK_ELSE);
+ENDIF		PARSE(TOK_ENDIF);
+WHILE		PARSE(TOK_WHILE);
+DO		PARSE(TOK_DO);
+ENDWHILE	PARSE(TOK_ENDWHILE);
+FOR		PARSE(TOK_FOR);
+TO		PARSE(TOK_TO);
+DOWNTO		PARSE(TOK_DOWNTO);
+STEP		PARSE(TOK_STEP);
+ENDFOR		PARSE(TOK_ENDFOR);
+LET		PARSE(TOK_LET);
+CALL		PARSE(TOK_CALL);
+OR		PARSE(TOK_OR);
+AND		PARSE(TOK_AND);
+NOT		PARSE(TOK_NOT);
+"+"		PARSE(TOK_PLUS);
+"-"		PARSE(TOK_MINUS);
+"*"		PARSE(TOK_MULT);
+"/"		PARSE(TOK_DIV);
+"%"		PARSE(TOK_MOD);
+"<"		PARSE(TOK_LT);
+">"		PARSE(TOK_GT);
+"("		PARSE(TOK_LPAR);
+")"		PARSE(TOK_RPAR);
+"["		PARSE(TOK_LBRAC);
+"]"		PARSE(TOK_RBRAC);
+"="		PARSE(TOK_EQ);
+[A-Z]		PARSE(TOK_ID);
 {COMMENT}	|
 [[:space:]]	/* ignore */
 . {
@@ -67,17 +62,19 @@ NOT		Parse(yyextra, TOK_NOT, yytext);
 int main()
 {
 	yyscan_t scanner;
-	void *parser;
+	struct parse_context ctxt = {0, {0}, 0};
 
-	parser = ParseAlloc(malloc);
+	freopen("isrc/hanoi2.i", "r", stdin);
+
+	ctxt.parser = ParseAlloc(malloc);
 #ifndef NDEBUG
 	ParseTrace(stderr, "parser: ");
 #endif
-	yylex_init_extra(parser, &scanner);
+	yylex_init_extra(&ctxt, &scanner);
 	yylex(scanner);
 	yylex_destroy(scanner);
-	Parse(parser, 0, 0);
-	ParseFree(parser, free);
+	Parse(ctxt.parser, 0, 0, &ctxt);
+	ParseFree(ctxt.parser, free);
 
 	return 0;
 }

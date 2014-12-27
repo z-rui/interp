@@ -5,9 +5,10 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#include "ast.h"
-#include "grammar.h"
+#include "interp.h"
 }
+
+%extra_argument {struct parse_context *ctxt}
 
 %syntax_error {
 	fprintf(stderr, "parser: unexpected token %s\n", TOKEN);
@@ -16,9 +17,10 @@
 
 %type prgm {struct ast_stmt *}
 %destructor prgm {free($$);}
-prgm(A)         ::= sub_list block(B).
+prgm         ::= sub_list block(B).
 {
-	A = B->head;
+	ctxt->main = B->head;
+	*B->tail = 0;
 	free(B);
 }
 
@@ -27,9 +29,8 @@ sub_list     ::= sub_list sub_dcl.
 
 sub_dcl      ::= SUB NUMBER(B) block(C) ENDSUB.
 {
-	/* TODO:
-		register_subroutine((int) strtod(B, 0), C->head);
-	*/
+	ctxt->sub[(int) strtod(B, 0)] = C->head;
+	*C->tail = 0;
 	free(C);
 }
 
@@ -44,7 +45,7 @@ block(A)     ::= .
 block(A)     ::= block(B) stmt(C).
 {
 	A = B;
-	*(A->tail) = C;
+	*A->tail = C;
 	A->tail = &C->next;
 }
 

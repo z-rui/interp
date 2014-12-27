@@ -4,29 +4,20 @@
 #define MAXLITERAL 80
 #define MAXVAR 100
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
+#include "grammar.h"
+#include "ast.h"
 
-enum tokentype {
-	SUB, ENDSUB, READ, WRITE, IF, THEN, ELSE, ENDIF, WHILE, DO, ENDWHILE, NOT, AND, OR, FOR, TO, DOWNTO, STEP, ENDFOR, LET, CALL, NKEYWORDS, /* keywords */
-	LT, GT, EQ, PLUS, MINUS, MULT, DIV, MOD, /* operators */
-	LPAREN, RPAREN, LBRACK, RBRACK,
-	ID, NUMBER, LITERAL, EOF_TOKEN,
+struct parse_context {
+	void *parser;
+	struct ast_stmt *sub[MAXVAR];
+	struct ast_stmt *main;
 };
 
-#include "scanner.h"
-#include "parse.h"
-
-extern const char *tokenname[];
-
-extern double numberval;
-extern char stringval[];
-extern struct astnode *subproc[];
-extern enum tokentype token;
-extern FILE *infile;
-
-extern void error(const char *);
+#ifndef NDEBUG
+extern void ParseTrace(FILE *, char *);
+#endif
+extern void *ParseAlloc(void *(*)(size_t));
+extern void ParseFree(void *, void (*)(void *));
+extern void Parse(void *, int, const char *, struct parse_context *);
 
 #endif /* INTERP_H */
