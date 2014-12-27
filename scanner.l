@@ -70,7 +70,9 @@ int main()
 	void *parser;
 
 	parser = ParseAlloc(malloc);
+#ifndef NDEBUG
 	ParseTrace(stderr, "parser: ");
+#endif
 	yylex_init_extra(parser, &scanner);
 	yylex(scanner);
 	yylex_destroy(scanner);
