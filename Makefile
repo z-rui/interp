@@ -12,7 +12,7 @@ scanner.c scanner.h: scanner.l
 	flex -o scanner.c --header-file=scanner.h scanner.l
 
 grammar.c grammar.h: grammar.y
-	./lemon grammar.y
+	lemon grammar.y
 
 clean:
 	rm *.o grammar.{c,h,out} scanner.[ch]
