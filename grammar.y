@@ -3,8 +3,13 @@
 
 %include {
 #include <assert.h>
+#include <stdlib.h>
 }
 
+%syntax_error {
+	fprintf(stderr, "parser: unexpected token %s\n", TOKEN);
+	exit(EXIT_FAILURE);
+}
 prgm         ::= sub_list block.
 
 sub_list     ::= .
