@@ -6,6 +6,7 @@
 
 #include "ast.h"
 #include "grammar.h"
+#include <gc/gc.h>
 #include <stdio.h>
 
 struct parse_context {

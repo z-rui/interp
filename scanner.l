@@ -1,7 +1,8 @@
 %{
 #include "interp.h"
 
-#define PARSE(tok) Parse(yyextra->parser, tok, yytext, yyextra)
+#define PARSEDUP(tok) Parse(yyextra->parser, tok, GC_strdup(yytext), yyextra)
+#define PARSE(tok) Parse(yyextra->parser, tok, 0, yyextra)
 %}
 
 %option noyywrap
@@ -14,11 +15,8 @@ COMMENT \{[^}]*\}
 
 %%
 
-{NUMBER}	PARSE(TOK_NUMBER);
-{LITERAL} {
-	char *lit = strncpy(malloc(yyleng-1), yytext+1, yyleng-2);
-	Parse(yyextra->parser, TOK_LITERAL, lit, yyextra);
-}
+{NUMBER}	PARSEDUP(TOK_NUMBER);
+{LITERAL}	PARSEDUP(TOK_LITERAL);
 SUB		PARSE(TOK_SUB);
 ENDSUB		PARSE(TOK_ENDSUB);
 READ		PARSE(TOK_READ);
@@ -52,7 +50,8 @@ NOT		PARSE(TOK_NOT);
 "["		PARSE(TOK_LBRAC);
 "]"		PARSE(TOK_RBRAC);
 "="		PARSE(TOK_EQ);
-[A-Z]		PARSE(TOK_ID);
+[A-Z]		PARSEDUP(TOK_ID);
+<<EOF>>		PARSE(0); yyterminate();
 {COMMENT}	|
 [[:space:]]	/* ignore */
 . {
