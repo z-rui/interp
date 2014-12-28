@@ -228,10 +228,10 @@ expr(A)      ::= expr(B) MULT|DIV|MOD(OP) expr(C).
 	A->u.bin.l = B;
 	A->u.bin.r = C;
 }
-expr(A)      ::= MINUS expr(B).
+expr(A)      ::= MINUS(OP) expr(B).
 {
 	A = GC_MALLOC(sizeof *A);
-	A->tok = TOK_MINUS;
+	A->tok = @OP;
 	A->u.bin.l = 0;
 	A->u.bin.r = B;
 }
@@ -258,24 +258,24 @@ logical(A)   ::= LPAR cond(B) RPAR.
 {
 	A = B;
 }
-logical(A)   ::= logical(B) AND logical(C).
+logical(A)   ::= logical(B) AND(OP) logical(C).
 {
 	A = GC_MALLOC(sizeof *A);
-	A->tok = TOK_AND;
+	A->tok = @OP;
 	A->u.bin.l = B;
 	A->u.bin.r = C;
 }
-logical(A)   ::= logical(B) OR logical(C).
+logical(A)   ::= logical(B) OR(OP) logical(C).
 {
 	A = GC_MALLOC(sizeof *A);
-	A->tok = TOK_OR;
+	A->tok = @OP;
 	A->u.bin.l = B;
 	A->u.bin.r = C;
 }
-logical(A)   ::= NOT logical(B).
+logical(A)   ::= NOT(OP) logical(B).
 {
 	A = GC_MALLOC(sizeof *A);
-	A->tok = TOK_NOT;
+	A->tok = @OP;
 	A->u.bin.l = 0;
 	A->u.bin.r = B;
 }
