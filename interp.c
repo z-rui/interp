@@ -114,7 +114,7 @@ double eval(struct ast_expr *ast)
 		case TOK_NUMBER:return ast->u.val;
 
 		case TOK_PLUS:	return eval(lhs) + eval(rhs);
-		case TOK_MINUS:	return ((lhs) ? eval(lhs) : 0.0) - eval(rhs);
+		case TOK_MINUS:	return (lhs) ? eval(lhs) - eval(rhs): -eval(rhs);
 		case TOK_MULT:	return eval(lhs) * eval(rhs);
 		case TOK_DIV:	return eval(lhs) / eval(rhs);
 		case TOK_MOD:	return fmod(eval(lhs), eval(rhs));
@@ -124,7 +124,7 @@ double eval(struct ast_expr *ast)
 		case TOK_EQ:	return eval(lhs) == eval(rhs);
 		case TOK_AND:	return eval(lhs) && eval(rhs);
 		case TOK_OR:	return eval(lhs) || eval(rhs);
-		case TOK_NOT:	return !eval(lhs);
+		case TOK_NOT:	return !eval(rhs);
 	}
 #undef lhs
 #undef rhs
