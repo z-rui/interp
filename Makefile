@@ -1,9 +1,9 @@
 CC=gcc
 CFLAGS=-Wall -g
-LDFLAGS=-lm
+LDFLAGS=
 
 a: scanner.o grammar.o interp.o
-	$(CC) -o $@ scanner.o grammar.o interp.o
+	$(CC) $(LDFLAGS) -o $@ scanner.o grammar.o interp.o -lgc -lm
 
 scanner.o: scanner.c interp.h
 grammar.o: grammar.c interp.h 
