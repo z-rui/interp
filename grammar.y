@@ -212,7 +212,14 @@ expr(A)      ::= LPAR expr(B) RPAR.
 {
 	A = B;
 }
-expr(A)      ::= expr(B) PLUS|MINUS|MULT|DIV|MOD(OP) expr(C).
+expr(A)      ::= expr(B) PLUS|MINUS(OP) expr(C).
+{
+	A = GC_MALLOC(sizeof *A);
+	A->tok = @OP;
+	A->u.bin.l = B;
+	A->u.bin.r = C;
+}
+expr(A)      ::= expr(B) MULT|DIV|MOD(OP) expr(C).
 {
 	A = GC_MALLOC(sizeof *A);
 	A->tok = @OP;
