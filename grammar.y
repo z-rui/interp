@@ -258,10 +258,17 @@ logical(A)   ::= LPAR cond(B) RPAR.
 {
 	A = B;
 }
-logical(A)   ::= logical(B) AND|OR(OP) logical(C).
+logical(A)   ::= logical(B) AND logical(C).
 {
 	A = GC_MALLOC(sizeof *A);
-	A->tok = @OP;
+	A->tok = TOK_AND;
+	A->u.bin.l = B;
+	A->u.bin.r = C;
+}
+logical(A)   ::= logical(B) OR logical(C).
+{
+	A = GC_MALLOC(sizeof *A);
+	A->tok = TOK_OR;
 	A->u.bin.l = B;
 	A->u.bin.r = C;
 }
