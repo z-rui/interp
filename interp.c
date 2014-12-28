@@ -1,186 +1,134 @@
 #include "interp.h"
+#include "scanner.h"
+#include <stdio.h>
+#include <stdlib.h>
 #include <assert.h>
 #include <math.h>
 
-static double mem[MAXVAR];
+static struct {
+	struct parse_context parse;
+	struct ast_stmt *sub[MAXVAR];
+	double mem[MAXVAR];
+} runtime = { {0, runtime.sub, 0}, {0}, {0} };
 
-static void stmt(struct astnode *ast);
-static void readstmt(struct astnode *ast);
-static void writestmt(struct astnode *ast);
-static void assignstmt(struct astnode *ast);
-static void forstmt(struct astnode *ast);
-static void ifstmt(struct astnode *ast);
-static void whilestmt(struct astnode *ast);
-static void callstmt(struct astnode *ast);
-static int evalbool(struct astnode *ast);
-static double eval(struct astnode *ast);
+static void readstmt(struct ast_var *);
+static void writestmt(struct ast_write *);
+static void assignstmt(struct ast_assign *);
+static void forstmt(struct ast_for *);
+static void ifstmt(struct ast_if *);
+static void whilestmt(struct ast_while *);
+static void callstmt(int);
+static double eval(struct ast_expr *);
 
-static void setmem(int index, double val)
+static double *varref(struct ast_var *var)
 {
-	if (index < 0 || index >= MAXVAR)
+	int idx;
+
+	idx = (var->indirect) ? (int) eval(var->u.expr) : (var->u.id - 'A');
+	if (idx < 0 || idx >= MAXVAR)
 		error("runtime index out of bound");
-	mem[index] = val;
+	return &runtime.mem[idx];
 }
 
-static double getmem(int index)
+void block(struct ast_stmt *ast)
 {
-	if (index < 0 || index >= MAXVAR)
-		error("runtime index out of bound");
-	return mem[index];
-}
-
-static int tomemindex(struct astnode *ast)
-{
-	if (ast->type == OTHER && ast->token == ID)
-		return ast->attr.id - 'A';
-	if (ast->type == MEMREF)
-		return (int) eval(ast->firstchild);
-	error("interp bug: invalid reference");
-	return 0;
-}
-
-void block(struct astnode *ast)
-{
-	struct astnode *child;
-
-	assert(ast->type == BLOCK);
-	for (child = ast->firstchild; child; child = child->nextsibling)
-		stmt(child);
-}
-
-void stmt(struct astnode *ast)
-{
-	assert(ast->type == OTHER);
-	switch (ast->token) {
-		case READ:	return readstmt(ast);
-		case WRITE:	return writestmt(ast);
-		case LET:	return assignstmt(ast);
-		case FOR:	return forstmt(ast);
-		case IF:	return ifstmt(ast);
-		case WHILE:	return whilestmt(ast);
-		case CALL:	return callstmt(ast);
-		default:	error("interp bug: unrecognized stmt");
+	while (ast) {
+		switch (ast->tok) {
+			case TOK_READ:	readstmt(ast->u.var); break;
+			case TOK_WRITE:	writestmt(ast->u.write); break;
+			case TOK_LET:	assignstmt(ast->u.assign); break;
+			case TOK_FOR:	forstmt(ast->u.for_); break;
+			case TOK_IF:	ifstmt(ast->u.if_); break;
+			case TOK_WHILE:	whilestmt(ast->u.while_); break;
+			case TOK_CALL:	callstmt(ast->u.subno); break;
+			default:	error("interp bug: unrecognized stmt");
+		}
+		ast = ast->next;
 	}
 }
 
-void readstmt(struct astnode *ast)
+void readstmt(struct ast_var *arg)
 {
-	int i;
-	double val;
-
-	i = tomemindex(ast->firstchild);
-	scanf("%lg", &val);
-	setmem(i, val);
+	scanf("%lg", varref(arg));
 }
 
-void writestmt(struct astnode *ast)
+void writestmt(struct ast_write *arg)
 {
-	if (ast->firstchild->type == OTHER && ast->firstchild->token == LITERAL)
-		puts(ast->firstchild->attr.str);
-	else
-		printf("%.14lg\n", eval(ast->firstchild));
+	if (arg->isliteral) {
+		puts(arg->u.literal);
+	} else {
+		printf("%.14lg\n", eval(arg->u.expr));
+	}
 	fflush(stdout);
 }
 
-void assignstmt(struct astnode *ast)
+void assignstmt(struct ast_assign *ast)
 {
-	int i;
-	double val;
-	
-	i = tomemindex(ast->firstchild);
-	val = eval(ast->firstchild->nextsibling);
-	setmem(i, val);
+	*varref(ast->l) = eval(ast->r);
 }
 
-void forstmt(struct astnode *ast)
+void forstmt(struct ast_for *ast)
 {
-	double start, stop, step;
-	struct astnode *body, *child;
-	int var;
+	double *var;
+	double lower, upper, step;
 
-	var = tomemindex(child = ast->firstchild);
-	start = eval(child = child->nextsibling);
-	stop = eval(child = child->nextsibling);
-	step = eval(child = child->nextsibling);
-	body = child = child->nextsibling;
+	var = varref(ast->var);
+	lower = eval(ast->lower);
+	upper = eval(ast->upper);
+	step = eval(ast->step);
 
-	if (var < 0 || var >= MAXVAR)
-		error("runtime index out of bound");
-	for (mem[var] = start; (step > 0) ? mem[var] <= stop : mem[var] >= stop; mem[var] += step) {
-		block(body);
+	for (*var = lower; (step > 0) ? *var <= upper : *var >= upper; *var += step) {
+		block(ast->block);
 	}
 }
 
-void ifstmt(struct astnode *ast)
+void ifstmt(struct ast_if *ast)
 {
-	struct astnode *condition, *thenpart, *elsepart, *child;
-
-	condition = child = ast->firstchild;
-	thenpart = child = child->nextsibling;
-	elsepart = child = child->nextsibling;
-	if (evalbool(condition))
-		block(thenpart);
-	else if (elsepart)
-		block(elsepart);
+	if (eval(ast->cond))
+		block(ast->yes);
+	else
+		block(ast->no);
 }
 
-void whilestmt(struct astnode *ast)
+void whilestmt(struct ast_while *ast)
 {
-	struct astnode *condition, *body, *child;
-
-	condition = child = ast->firstchild;
-	body = child = child->nextsibling;
-	while (evalbool(condition))
-		block(body);
+	while (eval(ast->cond))
+		block(ast->block);
 }
 
-void callstmt(struct astnode *ast)
+void callstmt(int idx)
 {
-	struct astnode *sub = subproc[(int) ast->attr.num];
+	struct ast_stmt *sub = runtime.sub[idx];
 
 	if (!sub)
 		error("called subprocedure is not defined");
 	block(sub);
 }
 
-int evalbool(struct astnode *ast)
+double eval(struct ast_expr *ast)
 {
-	struct astnode *lhs, *rhs;
+#define lhs ast->u.bin.l
+#define rhs ast->u.bin.r
+	switch (ast->tok) {
+		case TOK_ID:	return *varref(ast->u.var); /* means expr ::= var */
+		case TOK_NUMBER:return ast->u.val;
 
-	assert(ast->type == OTHER);
-	lhs = ast->firstchild;
-	rhs = lhs->nextsibling;
-	switch (ast->token) {
-		case LT:	return eval(lhs) < eval(rhs);
-		case GT:	return eval(lhs) > eval(rhs);
-		case EQ:	return eval(lhs) == eval(rhs);
-		case AND:	return evalbool(lhs) && evalbool(rhs);
-		case OR:	return evalbool(lhs) || evalbool(rhs);
-		case NOT:	return !evalbool(lhs);
-		default:	error("interp bug: unrecognized compare");
-	}
-	return 0;
-}
+		case TOK_PLUS:	return eval(lhs) + eval(rhs);
+		case TOK_MINUS:	return ((lhs) ? eval(lhs) : 0.0) - eval(rhs);
+		case TOK_MULT:	return eval(lhs) * eval(rhs);
+		case TOK_DIV:	return eval(lhs) / eval(rhs);
+		case TOK_MOD:	return fmod(eval(lhs), eval(rhs));
 
-double eval(struct astnode *ast)
-{
-	struct astnode *lhs = ast->firstchild, *rhs = lhs ? lhs->nextsibling : NULL;
-
-	switch (ast->type) {
-		case MEMREF:	return getmem(tomemindex(ast));
-		case NEG:	return -eval(ast->firstchild);
-		default:	assert(ast->type == OTHER);
+		case TOK_LT:	return eval(lhs) < eval(rhs);
+		case TOK_GT:	return eval(lhs) > eval(rhs);
+		case TOK_EQ:	return eval(lhs) == eval(rhs);
+		case TOK_AND:	return eval(lhs) && eval(rhs);
+		case TOK_OR:	return eval(lhs) || eval(rhs);
+		case TOK_NOT:	return !eval(lhs);
 	}
-	switch (ast->token) {
-		case PLUS:	return eval(lhs) + eval(rhs);
-		case MINUS:	return eval(lhs) - eval(rhs);
-		case MULT:	return eval(lhs) * eval(rhs);
-		case DIV:	return eval(lhs) / eval(rhs);
-		case MOD:	return fmod(eval(lhs), eval(rhs));
-		case NUMBER:	return ast->attr.num;
-		case ID:	return getmem(tomemindex(ast));
-		default:	error("eval bug: unrecognized operation");
-	}
+#undef lhs
+#undef rhs
+	error("eval bug: unrecognized operation");
 	return 0.0;
 }
 
@@ -192,15 +140,26 @@ void error(const char *s)
 
 int main(int argc, char *argv[])
 {
-	struct astnode *ast;
+	yyscan_t scanner;
+	FILE *infile;
 
 	if (!argv[1]) {
 		fprintf(stderr, "usage: %s source\n", argv[0]);
 		error("no input specified");
 	}
 	infile = fopen(argv[1], "r");
-	ast = parse();
+	runtime.parse.parser = ParseAlloc(malloc);
+#ifndef NDEBUG
+	ParseTrace(stderr, "parser: ");
+#endif
+	yylex_init_extra(&runtime.parse, &scanner);
+	yyset_in(infile, scanner);
+	yylex(scanner);
+	Parse(runtime.parse.parser, 0, 0, &runtime.parse);
+	ParseFree(runtime.parse.parser, free);
+	yylex_destroy(scanner);
 	fclose(infile);
-	block(ast);
+
+	block(runtime.parse.main);
 	return 0;
 }
