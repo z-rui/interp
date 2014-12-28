@@ -8,14 +8,17 @@
 %option reentrant
 %option extra-type="struct parse_context *"
 
-LITERAL \"[^"]*\"
+LITERAL \"[^\"]*\"
 NUMBER [0-9]+(\.[0-9]*)?([eE]+[0-9]+)?
 COMMENT \{[^}]*\}
 
 %%
 
 {NUMBER}	PARSE(TOK_NUMBER);
-{LITERAL}	PARSE(TOK_LITERAL);
+{LITERAL} {
+	char *lit = strncpy(malloc(yyleng-1), yytext+1, yyleng-2);
+	Parse(yyextra->parser, TOK_LITERAL, lit, yyextra);
+}
 SUB		PARSE(TOK_SUB);
 ENDSUB		PARSE(TOK_ENDSUB);
 READ		PARSE(TOK_READ);
@@ -58,23 +61,3 @@ NOT		PARSE(TOK_NOT);
   }
 
 %%
-
-int main()
-{
-	yyscan_t scanner;
-	struct parse_context ctxt = {0, {0}, 0};
-
-	freopen("isrc/hanoi2.i", "r", stdin);
-
-	ctxt.parser = ParseAlloc(malloc);
-#ifndef NDEBUG
-	ParseTrace(stderr, "parser: ");
-#endif
-	yylex_init_extra(&ctxt, &scanner);
-	yylex(scanner);
-	yylex_destroy(scanner);
-	Parse(ctxt.parser, 0, 0, &ctxt);
-	ParseFree(ctxt.parser, free);
-
-	return 0;
-}
