@@ -1,5 +1,5 @@
 %token_prefix {TOK_}
-%token_type {const char *}
+%token_type {char *}
 
 %include {
 #include <assert.h>
