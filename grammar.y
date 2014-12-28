@@ -41,6 +41,7 @@ struct ast_stmt_list {
 	struct ast_stmt *head, **tail;
 };
 }
+
 %type stmt_list {struct ast_stmt_list *}
 stmt_list(A)     ::= .
 {
