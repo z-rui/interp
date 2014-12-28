@@ -158,18 +158,20 @@ while_stmt(A)::= WHILE cond(B) DO block(C) ENDWHILE.
 }
 
 %type for_stmt {struct ast_for *}
-for_stmt(A)  ::= FOR var(VAR) EQ expr(LOWER) TO|DOWNTO expr(UPPER) DO block(BLOCK) ENDFOR.
+for_stmt(A)  ::= FOR var(VAR) EQ expr(LOWER) TO|DOWNTO(TOWORD) expr(UPPER) DO block(BLOCK) ENDFOR.
 {
 	A = GC_MALLOC(sizeof *A);
+	A->tok = @TOWORD;
 	A->var = VAR;
 	A->lower = LOWER;
 	A->upper = UPPER;
 	A->step = 0;
 	A->block = BLOCK;
 }
-for_stmt(A)  ::= FOR var(VAR) EQ expr(LOWER) TO|DOWNTO expr(UPPER) STEP expr(STEP) DO block(BLOCK) ENDFOR.
+for_stmt(A)  ::= FOR var(VAR) EQ expr(LOWER) TO|DOWNTO(TOWORD) expr(UPPER) STEP expr(STEP) DO block(BLOCK) ENDFOR.
 {
 	A = GC_MALLOC(sizeof *A);
+	A->tok = @TOWORD;
 	A->var = VAR;
 	A->lower = LOWER;
 	A->upper = UPPER;

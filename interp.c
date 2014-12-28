@@ -75,7 +75,7 @@ void forstmt(struct ast_for *ast)
 	var = varref(ast->var);
 	lower = eval(ast->lower);
 	upper = eval(ast->upper);
-	step = eval(ast->step);
+	step = (ast->step) ? eval(ast->step) : (ast->tok == TOK_TO) ? 1.0 : -1.0;
 
 	for (*var = lower; (step > 0) ? *var <= upper : *var >= upper; *var += step) {
 		block(ast->block);

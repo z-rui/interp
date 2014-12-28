@@ -23,6 +23,7 @@ struct ast_assign {
 };
 
 struct ast_for {
+	int tok;	/* TO or DOWNTO ? */
 	struct ast_var *var;
 	struct ast_expr *lower, *upper, *step;
 	struct ast_stmt *block;
