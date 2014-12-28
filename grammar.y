@@ -19,30 +19,39 @@
 %destructor prgm {free($$);}
 prgm         ::= sub_list block(B).
 {
-	ctxt->main = B->head;
-	*B->tail = 0;
-	free(B);
+	ctxt->main = B;
 }
 
 sub_list     ::= .
 sub_list     ::= sub_list sub_dcl.
 
-sub_dcl      ::= SUB NUMBER(B) block(C) ENDSUB.
+sub_dcl      ::= SUB number(B) block(C) ENDSUB.
 {
-	ctxt->sub[(int) strtod(B, 0)] = C->head;
-	*C->tail = 0;
-	free(C);
+	ctxt->sub[(int) B] = C;
 }
 
-%type block {struct ast_block *}
-%destructor block {free($$);}
-block(A)     ::= .
+%type block {struct ast_stmt *}
+block(A)     ::= stmt_list(B).
+{
+	A = B->head;
+	*B->tail = 0;
+	free(B);
+}
+
+%include{
+struct ast_stmt_list {
+	struct ast_stmt *head, **tail;
+};
+}
+%type stmt_list {struct ast_stmt_list *}
+%destructor stmt_list {free($$);}
+stmt_list(A)     ::= .
 {
 	A = malloc(sizeof *A);
 	A->head = 0;
 	A->tail = &A->head;
 }
-block(A)     ::= block(B) stmt(C).
+stmt_list(A)     ::= stmt_list(B) stmt(C).
 {
 	A = B;
 	*A->tail = C;
@@ -84,7 +93,7 @@ stmt(A)      ::= for_stmt(B).
 stmt(A)      ::= assign_stmt(B).
 {
 	A = malloc(sizeof *A);
-	A->tok = TOK_EQ;
+	A->tok = TOK_LET;
 	A->u.assign = B;
 }
 stmt(A)      ::= call_stmt(B).
@@ -103,17 +112,30 @@ read_stmt(A) ::= READ var(B).
 
 %type write_stmt {struct ast_write *}
 %destructor write_stmt {free($$);}
-write_stmt(A)::= WRITE LITERAL(B).
+write_stmt(A)::= WRITE literal(B).
 {
 	A = malloc(sizeof *A);
 	A->isliteral = 1;
-	A->u.literal = strcpy(malloc(strlen(B) + 1), B);
+	A->u.literal = B;
 }
 write_stmt(A)::= WRITE expr(B).
 {
 	A = malloc(sizeof *A);
 	A->isliteral = 0;
 	A->u.expr = B;
+}
+
+%type literal {char *}
+%destructor literal {free($$);}
+literal(A)   ::= LITERAL(B).
+{
+	A = B;
+}
+
+%type number {double}
+number(A)    ::= NUMBER(B).
+{
+	A = strtod(B, 0);
 }
 
 %type if_stmt {struct ast_if *}
@@ -174,9 +196,9 @@ assign_stmt(A)
 }
 
 %type call_stmt {int}
-call_stmt(A) ::= CALL NUMBER(B).
+call_stmt(A) ::= CALL number(B).
 {
-	A = (int) strtod(B, 0);
+	A = (int) B;
 }
 
 %left PLUS MINUS.
@@ -184,11 +206,11 @@ call_stmt(A) ::= CALL NUMBER(B).
 
 %type expr {struct ast_expr *}
 %destructor expr {free($$);}
-expr(A)      ::= NUMBER(B).
+expr(A)      ::= number(B).
 {
 	A = malloc(sizeof *A);
 	A->tok = TOK_NUMBER;
-	A->u.val = strtod(B, 0);
+	A->u.val = B;
 }
 expr(A)      ::= var(B).
 {
@@ -204,15 +226,15 @@ expr(A)      ::= expr(B) PLUS|MINUS|MULT|DIV|MOD(OP) expr(C).
 {
 	A = malloc(sizeof *A);
 	A->tok = @OP;
-	A->u.l = B;
-	A->u.r = C;
+	A->u.bin.l = B;
+	A->u.bin.r = C;
 }
 expr(A)      ::= MINUS expr(B).
 {
 	A = malloc(sizeof *A);
 	A->tok = TOK_MINUS;
-	A->u.l = 0;
-	A->u.r = B;
+	A->u.bin.l = 0;
+	A->u.bin.r = B;
 }
 
 %left OR.
@@ -225,8 +247,8 @@ cond(A)   ::= expr(B) LT|GT|EQ(OP) expr(C).
 {
 	A = malloc(sizeof *A);
 	A->tok = @OP;
-	A->u.l = B;
-	A->u.r = C;
+	A->u.bin.l = B;
+	A->u.bin.r = C;
 }
 cond(A)      ::= logical(B).
 {
@@ -243,15 +265,15 @@ logical(A)   ::= logical(B) AND|OR(OP) logical(C).
 {
 	A = malloc(sizeof *A);
 	A->tok = @OP;
-	A->u.l = B;
-	A->u.r = C;
+	A->u.bin.l = B;
+	A->u.bin.r = C;
 }
 logical(A)   ::= NOT logical(B).
 {
 	A = malloc(sizeof *A);
 	A->tok = TOK_NOT;
-	A->u.l = 0;
-	A->u.r = B;
+	A->u.bin.l = 0;
+	A->u.bin.r = B;
 }
 
 %type var {struct ast_var *}

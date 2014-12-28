@@ -10,7 +10,9 @@ struct ast_expr {
 	int tok;
 	union {
 		double val;
-		struct ast_expr *l, *r;
+		struct {
+			struct ast_expr *l, *r;
+		} bin;
 		struct ast_var *var;
 	} u;
 };
@@ -23,17 +25,17 @@ struct ast_assign {
 struct ast_for {
 	struct ast_var *var;
 	struct ast_expr *lower, *upper, *step;
-	struct ast_block *block;
+	struct ast_stmt *block;
 };
 
 struct ast_while {
 	struct ast_expr *cond;
-	struct ast_block *block;
+	struct ast_stmt *block;
 };
 
 struct ast_if {
 	struct ast_expr *cond;
-	struct ast_block *yes, *no;
+	struct ast_stmt *yes, *no;
 };
 
 struct ast_write {
@@ -56,8 +58,4 @@ struct ast_stmt {
 		int subno; /* CALL */
 	} u;
 	struct ast_stmt *next;
-};
-
-struct ast_block {
-	struct ast_stmt *head, **tail;
 };
