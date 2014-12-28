@@ -149,17 +149,20 @@ int main(int argc, char *argv[])
 	}
 	infile = fopen(argv[1], "r");
 	runtime.parse.parser = ParseAlloc(malloc);
-#ifndef NDEBUG
+#if	0 && !defined(NDEBUG)
 	ParseTrace(stderr, "parser: ");
 #endif
+
 	yylex_init_extra(&runtime.parse, &scanner);
 	yyset_in(infile, scanner);
 	yylex(scanner);
-	Parse(runtime.parse.parser, 0, 0, &runtime.parse);
-	ParseFree(runtime.parse.parser, free);
 	yylex_destroy(scanner);
+
+	ParseFree(runtime.parse.parser, free);
+
 	fclose(infile);
 
 	block(runtime.parse.main);
+
 	return 0;
 }
