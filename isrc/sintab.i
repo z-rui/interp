@@ -1,0 +1,16 @@
+SUB 01 { SIN }
+        LET S = R * R
+        LET S = (((S/42-1)*S/5+4)*S/-24+1)*R
+ENDSUB
+SUB 02 { DEG->RAD }
+        LET R = D / 180 * P
+ENDSUB
+
+LET P = 3.1415926535898 { PI }
+
+WRITE "INPUT DEGREE: (0..90)"
+READ D
+CALL 02
+CALL 01
+WRITE "SINE OF D DEGREE IS:"
+WRITE S

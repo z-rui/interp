@@ -1,0 +1,7 @@
+SUB 01
+        WRITE "HELLO, WORLD"
+ENDSUB
+
+FOR I = 1 TO 10 DO
+        CALL 01
+ENDFOR
